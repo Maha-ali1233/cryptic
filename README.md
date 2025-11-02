@@ -1,6 +1,6 @@
 # AI Crypto Trend Prediction System
 
-![Crypto App Demo](./demo.gif)  <!-- Add your GIF in the repo root as demo.gif -->
+![Crypto App Demo](./cypher.gif)  <!-- Add your GIF in the repo root as demo.gif -->
 
 **Real-time cryptocurrency trend prediction and analytics dashboard** using AI-driven ensemble models.
 
@@ -28,7 +28,7 @@
 
 ## 🎬 Demo
 
-![Crypto App Demo](./demo.gif)
+![Crypto App Demo](./cypher.gif)
 
 > The dashboard shows live price updates and trend predictions with confidence scores.
 
