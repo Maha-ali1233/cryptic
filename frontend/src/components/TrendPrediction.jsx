@@ -1,79 +1,7 @@
-// components/TrendPrediction.jsx
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const TrendPrediction = ({ coin }) => {
-  const [prediction, setPrediction] = useState(null);
-  const [connectionStatus, setConnectionStatus] = useState("connecting");
-
-  useEffect(() => {
-    const ws = new WebSocket("ws://localhost:8000/ws");
-
-    ws.onopen = () => {
-      console.log("✅ WebSocket connected");
-      setConnectionStatus("connected");
-    };
-
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-
-        // Check if this is a trend prediction message for our coin
-        if (data.coin && data.trend && data.coin === coin) {
-          // Validate and normalize confidence value
-          let normalizedConfidence = 0.0;
-          if (data.confidence !== undefined && data.confidence !== null) {
-            // Handle both percentage (0-100) and decimal (0-1) formats
-            if (typeof data.confidence === "number") {
-              if (data.confidence > 1) {
-                // Assume it's percentage, convert to decimal
-                normalizedConfidence =
-                  Math.min(100, Math.max(0, data.confidence)) / 100;
-              } else {
-                // Already decimal, just clamp
-                normalizedConfidence = Math.min(
-                  1,
-                  Math.max(0, data.confidence)
-                );
-              }
-            } else if (typeof data.confidence === "string") {
-              // Try to parse string to number
-              const parsed = parseFloat(data.confidence);
-              if (!isNaN(parsed)) {
-                normalizedConfidence =
-                  parsed > 1 ? parsed / 100 : Math.min(1, Math.max(0, parsed));
-              }
-            }
-          }
-
-          setPrediction({
-            ...data,
-            confidence: normalizedConfidence,
-            timestamp: data.timestamp || new Date().toISOString(),
-          });
-          setConnectionStatus("connected");
-        }
-      } catch (err) {
-        console.error("❌ Error parsing trend data:", err);
-        setConnectionStatus("error");
-      }
-    };
-
-    ws.onerror = (error) => {
-      console.error("❌ WebSocket error:", error);
-      setConnectionStatus("error");
-    };
-
-    ws.onclose = () => {
-      console.log("🔌 WebSocket disconnected");
-      setConnectionStatus("disconnected");
-    };
-
-    return () => {
-      ws.close();
-    };
-  }, [coin]);
-
+const TrendPrediction = ({ coin, prediction, connectionStatus = "connecting" }) => {
   const getTrendColor = (trend) => {
     switch (trend) {
       case "bullish":
@@ -117,7 +45,7 @@ const TrendPrediction = ({ coin }) => {
     }
   };
 
-  const getConnectionStatus = () => {
+  const getConnectionDisplay = () => {
     switch (connectionStatus) {
       case "connecting":
         return {
@@ -131,30 +59,30 @@ const TrendPrediction = ({ coin }) => {
           color: "text-green-400",
           pulse: "bg-green-500/20",
         };
+      case "reconnecting":
+        return {
+          text: "RECONNECTING...",
+          color: "text-yellow-400",
+          pulse: "bg-yellow-500/20",
+        };
       case "error":
         return {
           text: "CONNECTION ERROR",
           color: "text-red-400",
           pulse: "bg-red-500/20",
         };
-      case "disconnected":
-        return {
-          text: "DISCONNECTED",
-          color: "text-gray-400",
-          pulse: "bg-gray-500/20",
-        };
       default:
         return {
-          text: "UNKNOWN",
+          text: "DISCONNECTED",
           color: "text-gray-400",
           pulse: "bg-gray-500/20",
         };
     }
   };
 
-  const connection = getConnectionStatus();
+  const connection = getConnectionDisplay();
 
-  if (!prediction) {
+  if (!prediction || prediction.confidence <= 0.15) {
     return (
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
@@ -180,7 +108,6 @@ const TrendPrediction = ({ coin }) => {
             </div>
           </div>
 
-          {/* Connection Status Indicator */}
           <div className="flex items-center gap-2">
             <motion.div
               animate={{ scale: [1, 1.2, 1] }}
@@ -193,7 +120,6 @@ const TrendPrediction = ({ coin }) => {
           </div>
         </div>
 
-        {/* Progress bar for data collection */}
         <div className="mt-4">
           <div className="w-full bg-gray-800 rounded-full h-2">
             <motion.div
@@ -212,7 +138,6 @@ const TrendPrediction = ({ coin }) => {
     ? Math.round(prediction.confidence * 100)
     : 0;
 
-  // Format explanation text
   const formatExplanation = (explanation) => {
     if (!explanation) return ["No analysis available"];
     if (Array.isArray(explanation)) return explanation;
@@ -232,7 +157,6 @@ const TrendPrediction = ({ coin }) => {
         exit={{ opacity: 0, y: -20, scale: 0.95 }}
         className={`rounded-xl p-6 border-2 backdrop-blur-sm transition-all duration-500 ${colors.bg} ${colors.border} ${colors.glow}`}
       >
-        {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
             <motion.span
@@ -281,7 +205,6 @@ const TrendPrediction = ({ coin }) => {
           </motion.div>
         </div>
 
-        {/* Explanation */}
         <motion.div
           initial={{ height: 0, opacity: 0 }}
           animate={{ height: "auto", opacity: 1 }}
@@ -304,7 +227,6 @@ const TrendPrediction = ({ coin }) => {
           </div>
         </motion.div>
 
-        {/* Confidence Meter */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -323,7 +245,6 @@ const TrendPrediction = ({ coin }) => {
               transition={{ duration: 1.5, ease: "easeOut", delay: 0.7 }}
               className={`h-3 rounded-full relative ${colors.bar}`}
             >
-              {/* Animated shine effect */}
               <motion.div
                 animate={{ x: ["-100%", "100%"] }}
                 transition={{
@@ -337,7 +258,6 @@ const TrendPrediction = ({ coin }) => {
             </motion.div>
           </div>
 
-          {/* Confidence scale markers */}
           <div className="flex justify-between text-xs text-gray-400 mt-1 font-rajdhani">
             <span>0%</span>
             <span>25%</span>
@@ -346,7 +266,6 @@ const TrendPrediction = ({ coin }) => {
             <span>100%</span>
           </div>
 
-          {/* Confidence interpretation */}
           <div className="text-xs text-gray-500 text-center mt-2 font-rajdhani">
             {confidencePercentage >= 80 && "Very High Confidence"}
             {confidencePercentage >= 60 &&
@@ -362,7 +281,6 @@ const TrendPrediction = ({ coin }) => {
           </div>
         </motion.div>
 
-        {/* Connection Status Footer */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
